@@ -1,9 +1,14 @@
 # Enhanced and Fixed TensorFlow Model Code for Leaf Disease Detection
 
+import os
+import logging
 from tensorflow.keras import Sequential, layers, Model
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.utils import img_to_array, load_img
+
+logging.basicConfig(level=logging.INFO)
 
 # point this path at the folder you unzipped from Kaggle
 DATA_DIR = "../data/PlantVillage"
@@ -38,12 +43,17 @@ num_classes = len(train_data.class_indices)
 
 
 # Assumes num_classes is defined
-num_classes = 3  # e.g., 'healthy', 'early_blight', 'late_blight'
+num_classes = len(train_data.class_indices)  # e.g., 'healthy', 'early_blight', 'late_blight'
 
 # 1. Data Preparation (make sure you define these properly in your main script)
 train_data = ...  # your ImageDataGenerator or tf.data pipeline
 val_data = ...
-sample_image = ...  # a (1, 224, 224, 3) numpy array for feature extraction demo
+
+if not os.path.exists('../data/sample_image.jpg'):
+    raise FileNotFoundError("Sample image not found at '../data/sample_image.jpg'")
+
+sample_image = img_to_array(load_img('../data/sample_image.jpg', target_size=(224, 224))) / 255.0
+sample_image = sample_image.reshape((1, 224, 224, 3))
 
 # 2. Base MobileNetV2 Model
 base = MobileNetV2(weights='imagenet', include_top=False, pooling='avg', input_shape=(224, 224, 3))
@@ -68,6 +78,10 @@ history1 = model.fit(train_data, epochs=5, validation_data=val_data)
 for layer in base.layers[-20:]:
     layer.trainable = True
 
+logging.info("Trainable layers:")
+for layer in base.layers:
+    logging.info(f"{layer.name}: {layer.trainable}")
+
 model.compile(optimizer=Adam(1e-5), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 history2 = model.fit(train_data, epochs=5, validation_data=val_data)
 
@@ -75,10 +89,11 @@ history2 = model.fit(train_data, epochs=5, validation_data=val_data)
 # Get outputs from base model's convolutional block for visualisation/debugging
 feature_model = Model(
     inputs=model.input,
-    outputs=[base.get_layer(index=i).output for i in range(10, 13)]  # adjust indices as needed
+    outputs=[base.get_layer('block_5_add').output, base.get_layer('block_6_expand').output]
 )
 
 features = feature_model.predict(sample_image)
 
 # 7. Save Final Model
 model.save('plant_disease_model.h5')
+model.save('plant_disease_model')

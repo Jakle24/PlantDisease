@@ -1,0 +1,32 @@
+.card {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background-color: #e4f0e4;
+    border-radius: 8px;
+    color: #2c3e2c;
+  }
+  
+  .funFact {
+    font-style: italic;
+    margin-top: 0.5rem;
+  }
+  
+  .xpContainer {
+    margin-top: 1rem;
+  }
+  
+  .progressBar {
+    width: 100%;
+    height: 15px;
+    background-color: #b4d1b4;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+  }
+  
+  .progress {
+    height: 100%;
+    background-color: #4a6a4a;
+    transition: width 0.3s ease;
+  }
+  

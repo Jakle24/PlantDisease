@@ -1,0 +1,25 @@
+.app {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f5f0;
+    color: #2c3e2c;
+    min-height: 100vh;
+    padding: 1rem;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  .dark {
+    background-color: #121a12;
+    color: #a8d5a8;
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .dyslexiaFont {
+    font-family: 'Lexend', Arial, sans-serif;
+  }
+  

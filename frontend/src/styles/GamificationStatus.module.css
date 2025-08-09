@@ -1,0 +1,21 @@
+.gamification {
+    margin: 1rem 0;
+    font-weight: bold;
+  }
+  
+  .xpBar {
+    background-color: #ccc;
+    border-radius: 12px;
+    height: 20px;
+    width: 100%;
+    margin: 0.3rem 0;
+    overflow: hidden;
+  }
+  
+  .xpProgress {
+    background-color: #4caf50;
+    height: 100%;
+    border-radius: 12px 0 0 12px;
+    transition: width 0.5s ease;
+  }
+  

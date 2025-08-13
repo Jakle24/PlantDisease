@@ -1,3 +1,5 @@
 flask
 tensorflow
+numpy
 pillow
+tensorflow-datasets

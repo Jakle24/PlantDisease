@@ -1,43 +1,62 @@
-# main.py: Backend for Plant Disease Detection (Hopefully Finalised Version!)
-# ---------------------------------------------------------------
-# Now loads pre-trained model (no retraining), starts Flask API. Saves the exaserbatingly long waiting times. 
+# main.py: Backend for Plant Disease Detection + Gamification
+# -----------------------------------------------------------
 
 import os
+import json
 import numpy as np
+from datetime import date, timedelta
 from flask import Flask, request, jsonify
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import img_to_array, load_img
 
-# Configuration
-MODEL_PATH = "plant_disease_model.h5"
+# -----------------------------------------------------------
+# Config
+# -----------------------------------------------------------
+MODEL_PATH = "plant_disease_model.keras"  # Model file from training
 IMG_SIZE = (224, 224)
+USER_DATA_FILE = "userdata.json"
 
+# -----------------------------------------------------------
 # Load model
+# -----------------------------------------------------------
 if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError(f"Trained model not found at {MODEL_PATH}. Please run training first.")
+    raise FileNotFoundError(f"❌ Trained model not found at {MODEL_PATH}. Please run maintrain.py first.")
 
 print("✅ Loading trained model...")
 model = load_model(MODEL_PATH)
 print("✅ Model loaded successfully.")
 
-# Hardcoded class names (based on training set)
-class_names = [
-    "Apple___Apple_scab", "Apple___Black_rot", "Apple___Cedar_apple_rust", "Apple___healthy",
-    "Blueberry___healthy", "Cherry___healthy", "Cherry___Powdery_mildew",
-    "Corn___Cercospora_leaf_spot Gray_leaf_spot", "Corn___Common_rust", "Corn___healthy",
-    "Corn___Northern_Leaf_Blight", "Grape___Black_rot", "Grape___Esca_(Black_Measles)", "Grape___healthy",
-    "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)", "Orange___Haunglongbing_(Citrus_greening)",
-    "Peach___Bacterial_spot", "Peach___healthy", "Pepper,_bell___Bacterial_spot", "Pepper,_bell___healthy",
-    "Potato___Early_blight", "Potato___healthy", "Potato___Late_blight", "Raspberry___healthy",
-    "Soybean___healthy", "Squash___Powdery_mildew", "Strawberry___healthy", "Strawberry___Leaf_scorch",
-    "Tomato___Bacterial_spot", "Tomato___Early_blight", "Tomato___healthy", "Tomato___Late_blight",
-    "Tomato___Leaf_Mold", "Tomato___Septoria_leaf_spot",
-    "Tomato___Spider_mites Two-spotted_spider_mite", "Tomato___Target_Spot",
-    "Tomato___Tomato_mosaic_virus", "Tomato___Tomato_Yellow_Leaf_Curl_Virus"
-]
+# -----------------------------------------------------------
+# Load class names
+# -----------------------------------------------------------
+if os.path.exists("class_names.json"):
+    with open("class_names.json", "r") as f:
+        class_names = json.load(f)
+else:
+    raise FileNotFoundError("❌ class_names.json not found. Please export from training.")
+
 class_indices = {i: name for i, name in enumerate(class_names)}
 
-# Flask API setup
+# -----------------------------------------------------------
+# Gamification data handling
+# -----------------------------------------------------------
+def load_user_data():
+    if os.path.exists(USER_DATA_FILE):
+        try:
+            with open(USER_DATA_FILE, "r") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            pass
+    # Default user profile
+    return {"xp": 0, "streak": 0, "last_scan": None, "badges": []}
+
+def save_user_data(data):
+    with open(USER_DATA_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+# -----------------------------------------------------------
+# Flask app
+# -----------------------------------------------------------
 app = Flask(__name__)
 
 def prepare_image(file):
@@ -49,15 +68,47 @@ def prepare_image(file):
 def predict():
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
+    
     file = request.files["file"]
     x = prepare_image(file)
     preds = model.predict(x)[0]
     idx = int(np.argmax(preds))
+    
+    # Load gamification data
+    user_data = load_user_data()
+
+    # Add XP
+    user_data["xp"] += 10  # +10 XP per scan
+
+    # Update streak
+    today = date.today()
+    if user_data["last_scan"] == str(today - timedelta(days=1)):
+        user_data["streak"] += 1
+    elif user_data["last_scan"] != str(today):
+        user_data["streak"] = 1
+    user_data["last_scan"] = str(today)
+
+    # Award badges
+    if user_data["xp"] >= 100 and "Green Thumb" not in user_data["badges"]:
+        user_data["badges"].append("Green Thumb")
+    if user_data["streak"] >= 7 and "One Week Wonder" not in user_data["badges"]:
+        user_data["badges"].append("One Week Wonder")
+
+    save_user_data(user_data)
+
     return jsonify({
         "disease": class_indices[idx],
-        "confidence": round(float(preds[idx]), 4)
+        "confidence": round(float(preds[idx]), 4),
+        "xp": user_data["xp"],
+        "streak": user_data["streak"],
+        "badges": user_data["badges"]
     })
 
+@app.route("/profile", methods=["GET"])
+def profile():
+    return jsonify(load_user_data())
+
+# -----------------------------------------------------------
 if __name__ == "__main__":
     print("🚀 Starting Flask API at http://localhost:5000")
     app.run(host="0.0.0.0", port=5000, debug=True)

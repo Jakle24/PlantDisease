@@ -4,6 +4,7 @@
 import os
 import json
 import numpy as np
+from io import BytesIO
 from datetime import date, timedelta
 from flask import Flask, request, jsonify
 from tensorflow.keras.models import load_model
@@ -59,21 +60,29 @@ def save_user_data(data):
 # -----------------------------------------------------------
 app = Flask(__name__)
 
-def prepare_image(file):
-    img = load_img(file, target_size=IMG_SIZE)
+def prepare_image(file_storage):
+    """
+    Convert Flask's FileStorage into a Keras-ready tensor.
+    """
+    file_storage.seek(0)  # ensure pointer at start
+    img = load_img(BytesIO(file_storage.read()), target_size=IMG_SIZE)
     arr = img_to_array(img) / 255.0
     return np.expand_dims(arr, 0)
+
+@app.route("/ping", methods=["GET"])
+def ping():
+    return jsonify({"status": "ok"})
 
 @app.route("/predict", methods=["POST"])
 def predict():
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
-    
+
     file = request.files["file"]
     x = prepare_image(file)
     preds = model.predict(x)[0]
     idx = int(np.argmax(preds))
-    
+
     # Load gamification data
     user_data = load_user_data()
 

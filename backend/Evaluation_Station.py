@@ -17,7 +17,7 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 # -----------------------------------------------------------
 MODEL_PATH = "plant_disease_model.keras"
 CLASS_NAMES_PATH = "class_names.json"
-TEST_DIR = "dataset/test" 
+TEST_DIR = r"C:\Users\Student\Documents\Module Dev Containers\PlantDisease\backend\dataset\test\PlantVillage"
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 
@@ -61,11 +61,11 @@ y_true = test_generator.classes
 # -----------------------------------------------------------
 # Classification report
 # -----------------------------------------------------------
-print("\n Classification Report:")
-report = classification_report(y_true, y_pred, target_names=class_names)
+print("\nClassification Report:")
+report = classification_report(y_true, y_pred, target_names=class_names, zero_division=0)
 print(report)
 
-# Save to file for dissertation appendix
+# Save to file
 with open("evaluation_report.txt", "w") as f:
     f.write(report)
 
@@ -82,4 +82,4 @@ plt.tight_layout()
 plt.savefig("confusion_matrix.png")
 plt.show()
 
-print("\n Evaluation complete. Results saved to evaluation_report.txt and confusion_matrix.png")
+print("\nEvaluation complete. Results saved to evaluation_report.txt and confusion_matrix.png")

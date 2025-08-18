@@ -9,6 +9,11 @@ from datetime import date, timedelta
 from flask import Flask, request, jsonify
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import img_to_array, load_img
+from flask_cors import CORS
+
+
+app = Flask(__name__)
+CORS(app)
 
 # -----------------------------------------------------------
 # Config
@@ -39,6 +44,15 @@ else:
 class_indices = {i: name for i, name in enumerate(class_names)}
 
 # -----------------------------------------------------------
+# Load disease facts
+# -----------------------------------------------------------
+if os.path.exists("disease_facts.json"):
+    with open("disease_facts.json", "r") as f:
+        disease_facts = json.load(f)
+else:
+    disease_facts = {}
+
+# -----------------------------------------------------------
 # Gamification data handling
 # -----------------------------------------------------------
 def load_user_data():
@@ -61,9 +75,7 @@ def save_user_data(data):
 app = Flask(__name__)
 
 def prepare_image(file_storage):
-    """
-    Convert Flask's FileStorage into a Keras-ready tensor.
-    """
+    """Prepares the image for prediction."""
     file_storage.seek(0)  # ensure pointer at start
     img = load_img(BytesIO(file_storage.read()), target_size=IMG_SIZE)
     arr = img_to_array(img) / 255.0
@@ -105,13 +117,16 @@ def predict():
 
     save_user_data(user_data)
 
+    # Final response with fact included
     return jsonify({
         "disease": class_indices[idx],
         "confidence": round(float(preds[idx]), 4),
         "xp": user_data["xp"],
         "streak": user_data["streak"],
-        "badges": user_data["badges"]
+        "badges": user_data["badges"],
+        "fact": disease_facts.get(class_indices[idx], "No fact available for this disease yet.")
     })
+
 
 @app.route("/profile", methods=["GET"])
 def profile():
@@ -119,5 +134,5 @@ def profile():
 
 # -----------------------------------------------------------
 if __name__ == "__main__":
-    print("🚀 Starting Flask API at http://localhost:5000")
+    print("Starting Flask API at http://localhost:5000")
     app.run(host="0.0.0.0", port=5000, debug=True)

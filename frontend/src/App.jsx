@@ -5,6 +5,7 @@ import ImageUpload from './components/ImageUpload';
 import ResultCard from './components/ResultCard';
 import GamificationStatus from './components/GamificationStatus';
 import styles from './styles/App.module.css';
+import axios from "axios";
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -14,28 +15,40 @@ export default function App() {
   const [level, setLevel] = useState(1);
   const [streak, setStreak] = useState(0);
 
-  const handlePredict = async (imageFile) => {
-    // Simulate API call delay
-    await new Promise((r) => setTimeout(r, 1000));
+const handlePredict = async (imageFile) => {
+  if (!imageFile) return;
 
-    // Dummy response — replace with real API call later
-    const fakeResponse = {
-      plant: 'Rose',
-      disease: 'Black Spot',
-      confidence: 87,
-      funFact: 'Black spot is one of the most common fungal diseases affecting roses.',
-      xpGained: 15,
-    };
+  const formData = new FormData();
+  formData.append("file", imageFile);
 
-    setResult(fakeResponse);
+  try {
+    const res = await axios.post("http://localhost:5000/predict", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
-    // Update XP and level
-    setXp(prev => prev + fakeResponse.xpGained);
-    // Level up every 100 XP
-    setLevel(prev => Math.floor((xp + fakeResponse.xpGained) / 100) + 1);
-    // Increment streak (dummy logic)
-    setStreak(prev => prev + 1);
-  };
+    const data = res.data;
+
+    // Update frontend state with backend response
+    setResult({
+      disease: data.disease,
+      confidence: (data.confidence * 100).toFixed(2), // convert to %
+      xpGained: data.xp, // cumulative XP
+      streak: data.streak,
+      badges: data.badges,
+      fact: data.fact,
+    });
+
+    // Update XP / level / streak
+    setXp(data.xp);
+    setLevel(Math.floor(data.xp / 100) + 1);
+    setStreak(data.streak);
+  } catch (err) {
+    console.error("Error connecting to backend:", err);
+    alert("Failed to connect to backend. Make sure Flask is running!");
+  }
+};
 
   return (
     <div

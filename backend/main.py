@@ -1,16 +1,20 @@
-# backend/main.py
 import os
 import json
 import sqlite3
 import logging
+import traceback
 from io import BytesIO
 from datetime import date, timedelta
 from pathlib import Path
+
+import numpy as np
+from PIL import Image, UnidentifiedImageError
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import img_to_array, load_img
-import traceback
+
+
 
 # ---------------------------
 # Logging config
@@ -26,7 +30,8 @@ logger = logging.getLogger("plantd")
 # Flask + CORS
 # ---------------------------
 app = Flask(__name__)
-CORS(app)  # dev: allow all origins; restrict in production
+CORS(app, resources={r"/*": {"origins": "https://your-production-domain"}})
+
 
 # ---------------------------
 # Config
@@ -119,17 +124,59 @@ else:
 # Image prep helper (BytesIO safe)
 # ---------------------------
 def prepare_image(file_storage):
+    """
+    Robust image loader: read bytes, try PIL.Image.open, convert to RGB,
+    resize to IMG_SIZE and return a Keras-ready tensor.
+    Saves a debug copy on failure to backend/debug_upload.jpg or debug_upload_failed.bin.
+    """
     try:
-        # Ensure pointer at start, read bytes, wrap in BytesIO
         file_storage.stream.seek(0)
         data = file_storage.read()
+        if not data or len(data) == 0:
+            raise ValueError("Uploaded file is empty (0 bytes)")
+
+        MAX_BYTES = 10 * 1024 * 1024
+        if len(data) > MAX_BYTES:
+            raise ValueError(f"Uploaded file too large ({len(data)} bytes)")
+
         bio = BytesIO(data)
         bio.seek(0)
-        img = load_img(bio, target_size=IMG_SIZE)
-        arr = img_to_array(img) / 255.0
-        return np.expand_dims(arr, 0)
+
+        try:
+            pil_img = Image.open(bio)
+        except UnidentifiedImageError as e:
+            # save raw bytes for inspection then re-raise a helpful error
+            try:
+                dbg_path = Path(__file__).resolve().parent / "debug_upload_failed.bin"
+                with open(dbg_path, "wb") as fh:
+                    fh.write(data)
+                logger.warning("Saved debug upload to %s", dbg_path)
+            except Exception:
+                logger.exception("Failed to save debug upload")
+            raise ValueError("Could not identify image format (PIL.UnidentifiedImageError)") from e
+
+        pil_img = pil_img.convert("RGB")
+        pil_img = pil_img.resize(IMG_SIZE)
+
+        arr = np.asarray(pil_img) / 255.0
+        if arr.ndim == 2:
+            arr = np.stack([arr]*3, axis=-1)
+        if arr.shape[2] != 3:
+            arr = arr[..., :3]
+
+        return np.expand_dims(arr, 0).astype(np.float32)
+
     except Exception:
+        # save raw bytes for inspection (best-effort)
+        try:
+            dbg_path = Path(__file__).resolve().parent / "debug_upload_failed.bin"
+            with open(dbg_path, "wb") as fh:
+                fh.write(data if 'data' in locals() else b"")
+            logger.debug("Wrote debug upload to %s", dbg_path)
+        except Exception:
+            logger.exception("Failed to write debug upload")
         raise
+
 
 @app.before_request
 def log_request():

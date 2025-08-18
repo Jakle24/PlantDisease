@@ -1,64 +1,67 @@
-import React, { useRef, useState } from 'react';
-import styles from '../styles/ImageUpload.module.css';
+
+import React, { useState } from "react";
+import axios from "axios";
 
 export default function ImageUpload({ onPredict }) {
-  const fileInputRef = useRef(null);
-  const [dragging, setDragging] = useState(false);
-  const [fileName, setFileName] = useState(null);
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleFile = (file) => {
-    setFileName(file.name);
-    onPredict(file);
-  };
-
-  const onFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
+  const handleFileChange = (e) => {
+    if (e.target.files.length > 0) {
+      setFile(e.target.files[0]);
     }
   };
 
-  const onDragOver = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setDragging(true);
-  };
+    if (!file) {
+      alert("Please select an image first!");
+      return;
+    }
 
-  const onDragLeave = (e) => {
-    e.preventDefault();
-    setDragging(false);
-  };
+    const formData = new FormData();
+    formData.append("file", file);
 
-  const onDrop = (e) => {
-    e.preventDefault();
-    setDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
+    setLoading(true);
+    try {
+      const res = await axios.post("http://127.0.0.1:5000/predict", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const data = res.data;
+
+      // Pass backend response to parent (App.jsx)
+      onPredict({
+        disease: data.disease,
+        confidence: (data.confidence * 100).toFixed(2), // percentage
+        xpGained: data.xp,
+        streak: data.streak,
+        badges: data.badges,
+        fact: data.fact,
+      });
+    } catch (err) {
+      console.error("Error connecting to backend:", err);
+      alert("Failed to connect to backend. Make sure Flask is running!");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div
-      className={`${styles.dropzone} ${dragging ? styles.dragging : ''}`}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-      onClick={() => fileInputRef.current.click()}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter') fileInputRef.current.click(); }}
-      aria-label="Upload plant image"
-    >
-      {fileName ? (
-        <p>Selected file: {fileName}</p>
-      ) : (
-        <p>Drag & drop an image here, or click to select</p>
-      )}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={onFileChange}
-        className={styles.fileInput}
-      />
+    <div className="mt-4">
+      <form onSubmit={handleSubmit}>
+        <input type="file" accept="image/*" onChange={handleFileChange} />
+        <button
+          type="submit"
+          disabled={loading}
+          className="ml-2 px-4 py-2 bg-green-600 text-white rounded"
+        >
+          {loading ? "Scanning..." : "Scan Plant"}
+        </button>
+      </form>
+      {file && <p className="mt-2">Selected file: {file.name}</p>}
     </div>
   );
 }

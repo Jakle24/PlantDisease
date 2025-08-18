@@ -21,3 +21,9 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+/backend/plant_disease_model.keras
+/backend/userdata.db
+/backend/debug_upload_*.*
+node_modules/
+build/
+

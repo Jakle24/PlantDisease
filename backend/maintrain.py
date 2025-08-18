@@ -10,6 +10,11 @@ import tensorflow as tf
 from tensorflow.keras import Sequential, layers
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.optimizers import Adam
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)  # allow all domains for now
+
 
 # Step 1: Paths
 DATA_PATH = os.path.join(os.path.dirname(__file__), "dataset")

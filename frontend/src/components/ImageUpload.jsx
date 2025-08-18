@@ -1,21 +1,36 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 export default function ImageUpload({ onPredict }) {
   const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   const handleFileChange = (e) => {
-    if (e.target.files.length > 0) {
+    setErrorMsg(null);
+    if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0]);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMsg(null);
     if (!file) {
-      alert("Please select an image first!");
+      setErrorMsg("Please select an image first.");
       return;
     }
 
@@ -24,18 +39,13 @@ export default function ImageUpload({ onPredict }) {
 
     setLoading(true);
     try {
-      const res = await axios.post("http://127.0.0.1:5000/predict", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
+      // Let Axios set Content-Type boundary automatically
+      const res = await axios.post(`${backendUrl}/predict`, formData);
       const data = res.data;
 
-      // Pass backend response to parent (App.jsx)
       onPredict({
         disease: data.disease,
-        confidence: (data.confidence * 100).toFixed(2), // percentage
+        confidence: `${data.confidence.toFixed(2)}%`,
         xpGained: data.xp,
         streak: data.streak,
         badges: data.badges,
@@ -43,7 +53,11 @@ export default function ImageUpload({ onPredict }) {
       });
     } catch (err) {
       console.error("Error connecting to backend:", err);
-      alert("Failed to connect to backend. Make sure Flask is running!");
+      const msg =
+        err?.response?.data?.error ||
+        err?.message ||
+        "Failed to connect to backend. Make sure Flask is running at http://localhost:5000";
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }
@@ -61,6 +75,26 @@ export default function ImageUpload({ onPredict }) {
           {loading ? "Scanning..." : "Scan Plant"}
         </button>
       </form>
+
+      {previewUrl && (
+        <div style={{ marginTop: 12 }}>
+          <strong>Preview:</strong>
+          <div style={{ marginTop: 8 }}>
+            <img
+              src={previewUrl}
+              alt="preview"
+              style={{ maxWidth: "320px", maxHeight: "320px", borderRadius: 8 }}
+            />
+          </div>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div style={{ marginTop: 12, color: "#a00" }}>
+          <strong>Error:</strong> {errorMsg}
+        </div>
+      )}
+
       {file && <p className="mt-2">Selected file: {file.name}</p>}
     </div>
   );

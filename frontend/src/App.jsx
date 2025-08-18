@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 
+//import TestUpload from "./components/TestUpload"; (TEST UPLOAD COMPONENT)
 import DarkModeToggle from "./components/DarkModeToggle";
 import FontToggle from "./components/FontToggle";
 import ImageUpload from "./components/ImageUpload";
@@ -31,7 +32,9 @@ export default function App() {
       const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
       const res = await axios.post(`${API_URL}/predict`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { 
+          "Content-Type": "multipart/form-data" 
+        },
       });
 
       const data = res.data;
@@ -70,13 +73,13 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mt-6">
-        <GamificationStatus xp={xp} level={level} streak={streak} />
+<main className="mt-6">
+  <GamificationStatus xp={xp} level={level} streak={streak} />
 
-        <ImageUpload onPredict={handlePredict} />
+  <ImageUpload onPredict={handlePredict} />
 
-        {result && <ResultCard result={result} />}
-      </main>
+  {result && <ResultCard result={result} />}
+</main>
     </div>
   );
 }

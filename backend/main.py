@@ -55,56 +55,121 @@ DB_PATH = BASE_DIR / "userdata.db"
 IMG_SIZE = (224, 224)
 
 # ---------------------------
-# DB helpers (SQLite, lightweight)
+# DB helpers (SQLite, lightweight) - migration aware
 # ---------------------------
 def init_db():
+    """
+    Create table if missing. If the table exists but lacks the 'last_game_play'
+    column, ALTER TABLE to add it. Also ensures a default 'default' user row.
+    """
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
+
+    # Create table schema that includes last_game_play (safe if table doesn't exist)
     c.execute("""
     CREATE TABLE IF NOT EXISTS users (
         user_id TEXT PRIMARY KEY,
         xp INTEGER DEFAULT 0,
         streak INTEGER DEFAULT 0,
         last_scan TEXT,
+        last_game_play TEXT,
         badges TEXT DEFAULT '[]'
     )
     """)
-    c.execute("INSERT OR IGNORE INTO users(user_id, xp, streak, last_scan, badges) VALUES (?, ?, ?, ?, ?)",
-              ("default", 0, 0, None, "[]"))
+
+    # Check whether the column 'last_game_play' exists; if not, add it.
+    c.execute("PRAGMA table_info(users)")
+    cols = [row[1] for row in c.fetchall()]  # row[1] is column name
+    if "last_game_play" not in cols:
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN last_game_play TEXT")
+            logger.info("DB migration: added column 'last_game_play' to users table")
+        except Exception:
+            logger.exception("Failed to ALTER TABLE to add last_game_play")
+
+    # Ensure a default user exists (explicitly include last_game_play column)
+    c.execute("""
+        INSERT OR IGNORE INTO users(user_id, xp, streak, last_scan, last_game_play, badges)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, ("default", 0, 0, None, None, "[]"))
+
     conn.commit()
     conn.close()
     logger.info("Initialized sqlite DB at %s", DB_PATH)
 
+
 def load_user_data(user_id="default"):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT xp, streak, last_scan, badges FROM users WHERE user_id = ?", (user_id,))
+    c.execute("SELECT xp, streak, last_scan, last_game_play, badges FROM users WHERE user_id = ?", (user_id,))
     row = c.fetchone()
     conn.close()
     if row:
-        xp, streak, last_scan, badges_json = row
+        xp, streak, last_scan, last_game_play, badges_json = row
         try:
             badges = json.loads(badges_json)
         except Exception:
             badges = []
-        return {"xp": xp or 0, "streak": streak or 0, "last_scan": last_scan, "badges": badges}
-    return {"xp": 0, "streak": 0, "last_scan": None, "badges": []}
+        return {
+            "xp": xp or 0,
+            "streak": streak or 0,
+            "last_scan": last_scan,
+            "last_game_play": last_game_play,
+            "badges": badges
+        }
+    return {"xp": 0, "streak": 0, "last_scan": None, "last_game_play": None, "badges": []}
+
+
+def save_user_data(data, user_id="default"):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    badges_json = json.dumps(data.get("badges", []))
+    # include last_game_play in INSERT/UPDATE
+    c.execute("""
+        INSERT INTO users(user_id, xp, streak, last_scan, last_game_play, badges)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+            xp=excluded.xp,
+            streak=excluded.streak,
+            last_scan=excluded.last_scan,
+            last_game_play=excluded.last_game_play,
+            badges=excluded.badges
+    """, (
+        user_id,
+        data.get("xp", 0),
+        data.get("streak", 0),
+        data.get("last_scan"),
+        data.get("last_game_play"),
+        badges_json
+    ))
+    conn.commit()
+    conn.close()
+
 
 def save_user_data(data, user_id="default"):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     badges_json = json.dumps(data.get("badges", []))
     c.execute("""
-        INSERT INTO users(user_id, xp, streak, last_scan, badges)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO users(user_id, xp, streak, last_scan, last_game_play, badges)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(user_id) DO UPDATE SET
             xp=excluded.xp,
             streak=excluded.streak,
             last_scan=excluded.last_scan,
+            last_game_play=excluded.last_game_play,
             badges=excluded.badges
-    """, (user_id, data.get("xp", 0), data.get("streak", 0), data.get("last_scan"), badges_json))
+    """, (
+        user_id,
+        data.get("xp", 0),
+        data.get("streak", 0),
+        data.get("last_scan"),
+        data.get("last_game_play"),  # save here
+        badges_json
+    ))
     conn.commit()
     conn.close()
+
 
 # init DB early
 init_db()
@@ -266,6 +331,25 @@ def predict():
     except Exception as e:
         logger.exception("Unhandled exception in /predict:")
         return jsonify({"error": "Internal server error"}), 500
+    
+@app.route("/add_game_xp", methods=["POST"])
+def add_game_xp():
+    try:
+        data = request.get_json()
+        xp = int(data.get("xp", 0))
+        user_data = load_user_data()
+        today = date.today()
+        if user_data.get("last_game_play") == str(today):
+            return jsonify({"error": "Game already played today"}), 400
+
+        user_data["xp"] += xp
+        user_data["last_game_play"] = str(today)
+        save_user_data(user_data)
+        return jsonify({"xp": user_data["xp"], "streak": user_data["streak"]})
+    except Exception as e:
+        logger.exception("Failed to add game XP")
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/profile", methods=["GET"])
 def profile():

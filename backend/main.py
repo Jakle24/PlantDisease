@@ -26,6 +26,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger("plantd")
 
+def log_prediction(user_data, disease, confidence):
+    logger.info(
+        "[PREDICTION] Disease: %s | Confidence: %.2f%% | XP: %d | Streak: %d | Badges: %s",
+        disease,
+        confidence,
+        user_data["xp"],
+        user_data["streak"],
+        user_data["badges"]
+    )
+
+
 # ---------------------------
 # Flask + CORS
 # ---------------------------
@@ -235,7 +246,13 @@ def predict():
         if user_data["streak"] >= 7 and "One Week Wonder" not in user_data["badges"]:
             user_data["badges"].append("One Week Wonder")
 
+        logger.debug("Last scan: %s | Today: %s", last_scan, today)
+        logger.debug("Updated streak: %d | Updated XP: %d", user_data["streak"], user_data["xp"])
+        logger.debug("Badges: %s", user_data["badges"])
+
+
         save_user_data(user_data)
+        log_prediction(user_data, class_indices[idx], float(preds[idx]) * 100)
 
         return jsonify({
             "disease": class_indices[idx],

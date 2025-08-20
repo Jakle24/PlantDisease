@@ -30,7 +30,7 @@ logger = logging.getLogger("plantd")
 # Flask + CORS
 # ---------------------------
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://your-production-domain"}})
+CORS(app, resources={r"/*": {"origins": ["http://localhost:3000"]}})
 
 
 # ---------------------------

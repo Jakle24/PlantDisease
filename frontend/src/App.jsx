@@ -1,7 +1,4 @@
 import React, { useState } from "react";
-import axios from "axios";
-
-//import TestUpload from "./components/TestUpload"; (TEST UPLOAD COMPONENT)
 import DarkModeToggle from "./components/DarkModeToggle";
 import FontToggle from "./components/FontToggle";
 import ImageUpload from "./components/ImageUpload";
@@ -21,50 +18,26 @@ export default function App() {
   // -------------------------------
   // Handles image upload & prediction
   // -------------------------------
-  const handlePredict = async (imageFile) => {
-    if (!imageFile) return;
+  const handlePredict = (data) => {
+    // Update result card
+    setResult({
+      disease: data.disease,
+      confidence: parseFloat(data.confidence).toFixed(2) + "%",
+      xpGained: data.xpGained,
+      streak: data.streak,
+      badges: data.badges,
+      fact: data.fact,
+    });
 
-    const formData = new FormData();
-    formData.append("file", imageFile);
-
-    try {
-      // Use environment variable for backend URL
-      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-      const res = await axios.post(`${API_URL}/predict`, formData, {
-        headers: { 
-          "Content-Type": "multipart/form-data" 
-        },
-      });
-
-      const data = res.data;
-
-      // Update result card
-      setResult({
-        disease: data.disease,
-        confidence: (data.confidence * 100).toFixed(2),
-        xpGained: data.xp,
-        streak: data.streak,
-        badges: data.badges,
-        fact: data.fact,
-      });
-
-      // Update gamification status
-      setXp(data.xp);
-      setLevel(Math.floor(data.xp / 100) + 1);
-      setStreak(data.streak);
-    } catch (err) {
-      console.error("Error connecting to backend:", err);
-      alert("Failed to connect to backend. Make sure Flask is running!");
-    }
+    // Update gamification status
+    const newXp = xp + data.xpGained;
+    setXp(newXp);
+    setLevel(Math.floor(newXp / 100) + 1);
+    setStreak(data.streak);
   };
 
   return (
-    <div
-      className={`${styles.app} ${darkMode ? styles.dark : ""} ${
-        dyslexiaFont ? styles.dyslexiaFont : ""
-      }`}
-    >
+    <div className={`${styles.app} ${darkMode ? styles.dark : ""} ${dyslexiaFont ? styles.dyslexiaFont : ""}`}>
       <header className={styles.header}>
         <h1>Plant Disease Detector</h1>
         <div className="flex gap-4">
@@ -73,13 +46,13 @@ export default function App() {
         </div>
       </header>
 
-<main className="mt-6">
-  <GamificationStatus xp={xp} level={level} streak={streak} />
+      <main className="mt-6">
+        <GamificationStatus xp={xp} level={level} streak={streak} />
 
-  <ImageUpload onPredict={handlePredict} />
+        <ImageUpload onPredict={handlePredict} />
 
-  {result && <ResultCard result={result} />}
-</main>
+        {result && <ResultCard result={result} />}
+      </main>
     </div>
   );
 }

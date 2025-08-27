@@ -1,8 +1,11 @@
 {
-  "Pepper__bell___Bacterial_spot": "Bacterial spot thrives in warm, wet conditions and can cause dark lesions on leaves and fruit, reducing yield.",
-  "Pepper__bell___healthy": "A healthy pepper plant shows glossy green leaves and firm fruit — indicators of good soil nutrition and watering.",
-  "Potato___Early_blight": "Early blight in potatoes is caused by Alternaria solani and produces concentric dark rings on leaves, reducing photosynthesis.",
-  "Potato___Late_blight": "Late blight, the same disease that contributed to the Irish Potato Famine, is caused by Phytophthora infestans.",
-  "Tomato___Leaf_Mold": "Leaf mold in tomatoes develops in humid conditions and appears as velvety olive-green patches under leaves.",
-  "Tomato___healthy": "Healthy tomato plants have vibrant green foliage and are less susceptible to pests thanks to good airflow and pruning."
+  "Tomato___Bacterial_spot": "Bacterial spot on tomato, caused by Xanthomonas, creates small water-soaked lesions that can merge into large necrotic patches.",
+  "Tomato___Early_blight": "Early blight is marked by dark concentric rings on tomato leaves and stems, often starting on older foliage.",
+  "Tomato___Late_blight": "Tomato late blight causes water-soaked lesions that quickly expand, often with white mold on leaf undersides in moist conditions.",
+  "Tomato___Septoria_leaf_spot": "Septoria leaf spot produces numerous small, circular spots with dark margins, typically starting on lower leaves.",
+  "Tomato___Spider_mites_Two_spotted_spider_mite": "Two-spotted spider mites feed on tomato leaf cells, causing stippling, bronzing, and eventual leaf drop under hot, dry conditions.",
+  "Tomato___Target_Spot": "Target spot leads to brown necrotic lesions with concentric rings, resembling a target, often expanding during humid weather.",
+  "Tomato___Tomato_YellowLeaf__Curl_Virus": "TYLCV is spread by whiteflies and causes upward leaf curling, stunted growth, and severe yield loss in tomato plants.",
+  "Tomato___Tomato_mosaic_virus": "TMV causes mottling, mosaic patterns, and distorted growth in tomatoes — it is highly stable and spreads via mechanical contact.",
+  "Potato___healthy": "Healthy potato plants produce lush green foliage and form uniform tubers when grown in well-drained, nutrient-rich soil."
 }

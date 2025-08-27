@@ -30,3 +30,5 @@ Frontend:
 cd frontend
 npm install   # if not done
 npm start
+
+REMEMBER TO DOWNLOAD AND ADD PLANTVILLAGE UNDER backend/dataset/test/PlantVillage IF TESTING OR MACHINE LEARNING!!!!

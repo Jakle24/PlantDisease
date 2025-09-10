@@ -22,7 +22,7 @@ IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 
 if not os.path.exists(DATA_PATH):
-    raise FileNotFoundError(f"❌ Dataset folder not found at {DATA_PATH}")
+    raise FileNotFoundError(f"Dataset folder not found at {DATA_PATH}")
 
 # Step 2: Load datasets
 train_ds = tf.keras.utils.image_dataset_from_directory(
@@ -45,11 +45,11 @@ val_ds = tf.keras.utils.image_dataset_from_directory(
 # Step 3: Save class names
 class_names = train_ds.class_names
 num_classes = len(class_names)
-print(f"✅ Detected {num_classes} classes: {class_names}")
+print(f"Detected {num_classes} classes: {class_names}")
 
 with open("class_names.json", "w") as f:
     json.dump(class_names, f)
-print("💾 Saved class_names.json")
+print("Saved class_names.json")
 
 # Step 4: Normalization & prefetch
 normalization_layer = layers.Rescaling(1./255)
@@ -79,11 +79,11 @@ model.compile(
 )
 
 # Step 6: Train classifier head
-print("🚀 Training classifier head...")
+print("Training classifier head...")
 model.fit(train_ds, epochs=5, validation_data=val_ds)
 
 # Step 7: Fine-tune base model
-print("🔧 Fine-tuning base model...")
+print("Fine-tuning base model...")
 for layer in base_model.layers[-20:]:
     layer.trainable = True
 
@@ -97,4 +97,4 @@ model.fit(train_ds, epochs=5, validation_data=val_ds)
 # Step 8: Save trained model
 MODEL_PATH = "plant_disease_model.keras"
 model.save(MODEL_PATH)
-print(f"💾 Model saved to {MODEL_PATH}")
+print(f"Model saved to {MODEL_PATH}")

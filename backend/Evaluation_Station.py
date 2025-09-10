@@ -27,7 +27,7 @@ BATCH_SIZE = 32
 if not os.path.exists(MODEL_PATH):
     raise FileNotFoundError(f"Trained model not found at {MODEL_PATH}.")
 
-print("✅ Loading trained model...")
+print("Loading trained model...")
 model = load_model(MODEL_PATH)
 
 if not os.path.exists(CLASS_NAMES_PATH):
